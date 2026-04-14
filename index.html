@@ -166,7 +166,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8" id="meansContainer"></div>
                         <div class="bg-slate-50 rounded-2xl p-5 border">
                             <div class="flex flex-wrap justify-between items-center mb-5">
-                                <h3 class="font-bold">📏 Tukey’s HSD = q<sub>α,(t,ν)</sub> × √(MSE / b)</h3>
+                                <h3 class="font-bold">📏 Tukey's HSD = q<sub>α,(t,ν)</sub> × √(MSE / b)</h3>
                                 <div class="flex gap-2 bg-white px-3 py-1.5 rounded-xl"><span class="text-sm">q value:</span><input id="qInput" type="number" step="0.01" class="w-24 text-center font-mono font-bold border rounded-xl py-1"></div>
                             </div>
                             <div id="hsdResult" class="text-3xl font-bold text-emerald-700 mb-6"></div>
@@ -232,7 +232,7 @@
                 <div class="bg-white rounded-3xl shadow-xl border overflow-hidden">
                     <div class="bg-slate-100 px-7 py-4 border-b border-slate-200">
                         <h2 class="text-lg font-bold flex items-center gap-2">
-                            📚 Tukey’s Critical Values (q) Table — α = 0.05
+                            📚 Tukey's Critical Values (q) Table — α = 0.05
                             <span class="tooltip-icon" title="Studentized range statistic q(α, k=treatments, ν=error df where ν = (t-1)(b-1)). Use the value that matches your t and error df.">?</span>
                         </h2>
                     </div>
@@ -281,70 +281,71 @@
             [60, 2.83, 3.40, 3.74, 3.98, 4.16, 4.31, 4.44],
             ["∞", 2.77, 3.31, 3.63, 3.86, 4.03, 4.17, 4.29]
         ];
-        
-        // Helper: Compute p-value from F-distribution (approximation using incomplete beta)
-        function fProb(F, df1, df2) {
-            if (F <= 0 || df1 <= 0 || df2 <= 0) return 1;
-            // Use cumulative distribution function approximation
-            // x = df2/(df2 + df1*F)
-            let x = df2 / (df2 + df1 * F);
-            // Incomplete beta function approximation (regularized)
-            // Using relationship: P(F > f) = I_{df2/(df2+df1*f)}(df2/2, df1/2)
-            // Simplified using numerical approximation
-            function betainc(x, a, b) {
-                // Continued fraction approximation for incomplete beta
-                if (x === 0) return 0;
-                if (x === 1) return 1;
-                let bt = Math.exp(lnGamma(a+b) - lnGamma(a) - lnGamma(b) + a*Math.log(x) + b*Math.log(1-x));
-                if (x < (a+1)/(a+b+2)) {
-                    return bt * betacf(x, a, b) / a;
-                } else {
-                    return 1 - bt * betacf(1-x, b, a) / b;
-                }
-            }
-            function betacf(x, a, b) {
-                let maxIter = 200, eps = 1e-12;
-                let m, m2, aa, c, d, del, h, qab, qam, qap;
-                qab = a + b;
-                qap = a + 1;
-                qam = a - 1;
-                c = 1;
-                d = 1 - qab * x / qap;
-                if (Math.abs(d) < eps) d = eps;
+
+        // ─── Log-gamma (Lanczos) ──────────────────────────────────────────────
+        function lnGamma(z) {
+            const p = [0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+                       771.32342877765313, -176.61502916214059, 12.507343278686905,
+                       -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+            if (z < 0.5)
+                return Math.log(Math.PI) - Math.log(Math.sin(Math.PI * z)) - lnGamma(1 - z);
+            z -= 1;
+            let x = p[0];
+            for (let i = 1; i < 9; i++) x += p[i] / (z + i);
+            const t = z + 7.5;
+            return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+        }
+
+        // ─── Regularised incomplete beta  I_x(a,b)  via continued fraction ───
+        function betaInc(x, a, b) {
+            if (x <= 0) return 0;
+            if (x >= 1) return 1;
+            // Lentz's continued-fraction algorithm (Numerical Recipes §6.4)
+            const lbeta = lnGamma(a) + lnGamma(b) - lnGamma(a + b);
+            const front = Math.exp(Math.log(x) * a + Math.log(1 - x) * b - lbeta) / a;
+            function cf(x, a, b) {
+                const MAXIT = 300, EPS = 1e-14, FPMIN = 1e-300;
+                let c = 1, d = 1 - (a + b) * x / (a + 1);
+                if (Math.abs(d) < FPMIN) d = FPMIN;
                 d = 1 / d;
-                h = d;
-                for (m = 1; m <= maxIter; m++) {
-                    m2 = 2 * m;
-                    aa = m * (b - m) * x / ((qam + m2) * (a + m2));
-                    d = 1 + aa * d;
-                    if (Math.abs(d) < eps) d = eps;
-                    c = 1 + aa / c;
-                    if (Math.abs(c) < eps) c = eps;
+                let h = d;
+                for (let m = 1; m <= MAXIT; m++) {
+                    // even step
+                    let m2 = 2 * m;
+                    let num = m * (b - m) * x / ((a + m2 - 1) * (a + m2));
+                    d = 1 + num * d; if (Math.abs(d) < FPMIN) d = FPMIN;
+                    c = 1 + num / c; if (Math.abs(c) < FPMIN) c = FPMIN;
+                    d = 1 / d; h *= d * c;
+                    // odd step
+                    num = -(a + m) * (a + b + m) * x / ((a + m2) * (a + m2 + 1));
+                    d = 1 + num * d; if (Math.abs(d) < FPMIN) d = FPMIN;
+                    c = 1 + num / c; if (Math.abs(c) < FPMIN) c = FPMIN;
                     d = 1 / d;
-                    h *= d * c;
-                    aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2));
-                    d = 1 + aa * d;
-                    if (Math.abs(d) < eps) d = eps;
-                    c = 1 + aa / c;
-                    if (Math.abs(c) < eps) c = eps;
-                    d = 1 / d;
-                    del = d * c;
+                    const del = d * c;
                     h *= del;
-                    if (Math.abs(del - 1) < eps) break;
+                    if (Math.abs(del - 1) < EPS) break;
                 }
                 return h;
             }
-            function lnGamma(z) {
-                let g = 7, p = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
-                if (z < 0.5) return Math.log(Math.PI) - Math.log(Math.sin(Math.PI * z)) - lnGamma(1 - z);
-                z -= 1;
-                let x = p[0];
-                for (let i = 1; i < g+2; i++) x += p[i] / (z + i);
-                let t = z + g + 0.5;
-                return Math.log(2 * Math.PI)/2 + (z + 0.5) * Math.log(t) - t + Math.log(x);
+            // Use the symmetry relation for numerical stability when x > (a+1)/(a+b+2)
+            if (x < (a + 1) / (a + b + 2)) {
+                return front * cf(x, a, b);
+            } else {
+                // I_x(a,b) = 1 - I_{1-x}(b,a)
+                const front2 = Math.exp(Math.log(1 - x) * b + Math.log(x) * a - lbeta) / b;
+                return 1 - front2 * cf(1 - x, b, a);
             }
-            let pval = 1 - betainc(x, df2/2, df1/2);
-            return Math.min(1, Math.max(0, pval));
+        }
+
+        /**
+         * P(F_{df1,df2} > F_obs)  — upper-tail p-value
+         * Relation: P(F > f) = I_{x}(df1/2, df2/2)
+         * where x = df1*f / (df1*f + df2)
+         */
+        function fProb(F, df1, df2) {
+            if (!isFinite(F) || F <= 0 || df1 <= 0 || df2 <= 0) return 1;
+            const x = (df1 * F) / (df1 * F + df2);
+            return Math.min(1, Math.max(0, 1 - betaInc(x, df1 / 2, df2 / 2)));
         }
         
         function getSuggestedQ(t, dfE) { 
@@ -521,7 +522,7 @@
             const FTreat = MSTreat / MSE;
             const FBlock = MSBlock / MSE;
             
-            // Compute p-values
+            // Correct upper-tail p-values using the fixed fProb
             const pTreat = fProb(FTreat, dfTreat, dfError);
             const pBlock = fProb(FBlock, dfBlock, dfError);
             
@@ -602,26 +603,34 @@
             document.getElementById("hsdResult").innerHTML = `HSD = ${q} × √(${MSE.toFixed(4)}/${b}) = <span class="text-5xl font-black">${HSD.toFixed(4)}</span> <span class="text-sm">(α = ${alpha}, ν = ${dfE})</span>`;
             let ciHtml = `<div class="space-y-3"><h4 class="font-bold">Pairwise differences (μᵢ − μⱼ) with Tukey-adjusted p-values</h4>`;
             
-            // Compute Tukey-adjusted p-values
             for(let i = 0; i < means.length; i++) {
                 for(let j = i+1; j < means.length; j++) {
                     let diff = means[i] - means[j];
                     let low = diff - HSD;
                     let up = diff + HSD;
                     let sig = (low > 0 || up < 0);
-                    // Calculate Tukey p-value: p = 1 - Ptukey(|diff|/SE, t, dfE)
-                    let seDiff = Math.sqrt(2 * MSE / b);
-                    let tRatio = Math.abs(diff) / seDiff;
-                    // Approximate Tukey p-value using studentized range distribution
-                    let pValue = 1 - Math.exp(-0.5 * Math.pow(tRatio / q, 2) * (dfE + 1)); // rough approximation
-                    pValue = Math.min(0.9999, Math.max(0.0001, pValue));
+                    // Tukey-adjusted p-value: based on studentized range statistic
+                    // q_obs = |diff| / sqrt(MSE/b), then p = P(q_{t,dfE} > q_obs)
+                    // Approximated via the F-distribution: F = q_obs^2 / 2 ~ F(1, dfE) under H0
+                    // for a conservative but reasonable approximation
+                    let seDiff = Math.sqrt(MSE / b);
+                    let qObs = Math.abs(diff) / seDiff;
+                    // Use 2-sided t approximation scaled to match studentized range
+                    // P_tukey ≈ min(1, k*(k-1)/2 * P(|t_{dfE}| > qObs/sqrt(2)))
+                    // Better: use F approximation P = P(F(1,dfE) > qObs^2/2)
+                    let Fobs = (qObs * qObs) / 2;
+                    let rawP = fProb(Fobs, 1, dfE);
+                    // Bonferroni-style bound as a simple Tukey approximation
+                    let k = means.length;
+                    let nPairs = k * (k - 1) / 2;
+                    let pValue = Math.min(1, rawP * nPairs);
                     let pStars = pValue < 0.001 ? "***" : (pValue < 0.01 ? "**" : (pValue < 0.05 ? "*" : "ns"));
                     
                     ciHtml += `<div class="flex flex-wrap justify-between items-center p-4 bg-white border rounded-xl">
                         <div class="font-mono font-bold">${treatmentNames[i]} − ${treatmentNames[j]}</div>
                         <div class="text-2xl font-black">${diff.toFixed(3)}</div>
                         <div>CI: (${low.toFixed(3)}, ${up.toFixed(3)})</div>
-                        <div class="text-sm font-mono">p = ${pValue.toFixed(4)} ${pStars}</div>
+                        <div class="text-sm font-mono">p ≈ ${pValue.toFixed(4)} ${pStars}</div>
                         <div class="px-3 py-1 rounded-full text-xs font-bold ${sig ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}">${sig ? "✅ Significant" : "○ Not significant"}</div>
                     </div>`;
                 }
