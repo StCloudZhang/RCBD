@@ -21,6 +21,11 @@
         .interpretation-box { background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 6px solid #0284c7; }
         .sig-star { color: #dc2626; font-weight: bold; }
         .note-box { background: #fef3c7; border-left: 6px solid #f59e0b; }
+        .effect-small { background: #dbeafe; color: #1e40af; }
+        .effect-medium { background: #fed7aa; color: #9a3412; }
+        .effect-large { background: #dcfce7; color: #166534; }
+        .effect-badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600; margin-left: 0.5rem; }
+        .formula-box { background: #f1f5f9; padding: 0.6rem; border-radius: 8px; font-family: monospace; font-size: 0.75rem; margin: 0.5rem 0; border-left: 3px solid #3b82f6; }
     </style>
 </head>
 <body class="bg-gradient-to-br from-slate-50 to-blue-50/30 antialiased">
@@ -59,7 +64,6 @@
                         <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">📊 1. Define Design & Data</h2>
                     </div>
                     <div class="p-7 space-y-7">
-                        <!-- Dimension Controls: automatic table generation -->
                         <div class="grid grid-cols-2 gap-5">
                             <div>
                                 <label class="block text-sm font-semibold text-slate-700 mb-2">Treatments (t)</label>
@@ -77,7 +81,6 @@
                             🔄 Generate / Refresh Table
                         </button>
 
-                        <!-- Editable Labels -->
                         <div id="labelsSection" class="hidden space-y-5">
                             <div>
                                 <h3 class="text-md font-bold text-slate-700 flex items-center gap-2">🏷️ Treatment Names</h3>
@@ -89,7 +92,6 @@
                             </div>
                         </div>
 
-                        <!-- Data Table -->
                         <div>
                             <div class="flex justify-between items-center mb-3">
                                 <h3 class="text-md font-bold text-slate-700">📋 Response Values (Y<sub>ij</sub>)</h3>
@@ -132,7 +134,7 @@
                                 <div class="bg-emerald-50 p-4 rounded-xl"><span class="font-bold">SSBlock =</span> t × Σⱼ (Ȳ<sub>.j</sub> − Ȳ<sub>..</sub>)²</div>
                                 <div class="bg-emerald-50 p-4 rounded-xl"><span class="font-bold">SSError =</span> ΣᵢΣⱼ (Y<sub>ij</sub> − Ȳ<sub>i.</sub> − Ȳ<sub>.j</sub> + Ȳ<sub>..</sub>)²</div>
                             </div>
-                            <p class="text-xs text-slate-500 mt-2">✔️ Where Ȳ<sub>..</sub> = grand mean, Ȳ<sub>i.</sub> = treatment mean, Ȳ<sub>.j</sub> = block mean. These formulas compute sums of squares directly from deviations without needing a correction factor.</p>
+                            <p class="text-xs text-slate-500 mt-2">✔️ Where Ȳ<sub>..</sub> = grand mean, Ȳ<sub>i.</sub> = treatment mean, Ȳ<sub>.j</sub> = block mean.</p>
                         </div>
                     </div>
                 </div>
@@ -143,9 +145,9 @@
                     <div id="stepsContent" class="p-7 space-y-6 text-slate-700"></div>
                 </div>
 
-                <!-- ANOVA Table with p-values -->
+                <!-- ANOVA Table with p-values and Effect Sizes -->
                 <div id="anovaCard" class="hidden bg-white rounded-3xl shadow-xl overflow-hidden fade-in">
-                    <div class="bg-emerald-600 text-white px-7 py-4"><h2 class="text-xl font-bold">📈 3. ANOVA Table with p-values</h2></div>
+                    <div class="bg-emerald-600 text-white px-7 py-4"><h2 class="text-xl font-bold">📈 3. ANOVA Table with p-values & Effect Sizes</h2></div>
                     <div id="anovaTable" class="p-6"></div>
                 </div>
 
@@ -186,13 +188,12 @@
                                 <p>✓ Each individual CI has coverage <strong class="font-bold">&gt; 1−α</strong> (e.g., &gt;95% for α=0.05).</p>
                                 <p>✓ <strong class="font-bold">All CIs together</strong> have exactly <strong class="font-bold">(1−α)×100%</strong> confidence that <strong>every interval contains its true difference</strong>.</p>
                                 <p>✓ <strong class="font-bold">No further adjustment</strong> (e.g., Bonferroni) is needed — Tukey's method already controls the family-wise error rate (FWER) at α.</p>
-                                <p class="italic text-xs mt-2">📖 Interpretation: With 95% family-wise confidence, if you repeat the experiment many times, 95% of the time <strong>all</strong> confidence intervals will simultaneously capture their respective true differences.</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Interpretation Guide -->
+                <!-- Interpretation Guide with Effect Sizes and CI Interpretation -->
                 <div id="interpretationCard" class="hidden bg-white rounded-3xl shadow-xl overflow-hidden fade-in">
                     <div class="bg-sky-600 text-white px-7 py-4">
                         <h2 class="text-xl font-bold flex items-center gap-2">📖 5. How to Interpret Results</h2>
@@ -202,57 +203,56 @@
                             <div>
                                 <h3 class="font-bold text-sky-800">🎯 ANOVA Table Interpretation</h3>
                                 <ul class="list-disc list-inside mt-2 space-y-1 text-sm">
-                                    <li><strong>p-value for Treatments</strong>: If p < 0.05 (or your chosen α), <span class="font-semibold">reject H₀</span> → at least one treatment mean differs significantly.</li>
-                                    <li><strong>p-value for Blocks</strong>: If p < 0.05, blocking was effective at reducing variability. If p > 0.05, blocking may not have been necessary.</li>
-                                    <li><strong>F-statistic</strong>: Larger F values (relative to critical F) indicate stronger evidence against the null hypothesis.</li>
+                                    <li><strong>p-value for Treatments</strong>: If p < 0.05, reject H₀ → at least one treatment mean differs significantly.</li>
+                                    <li><strong>p-value for Blocks</strong>: If p < 0.05, blocking was effective at reducing variability.</li>
                                 </ul>
                             </div>
                             <div>
-                                <h3 class="font-bold text-sky-800">🔬 Tukey's HSD Pairwise Comparisons</h3>
+                                <h3 class="font-bold text-sky-800">📊 Effect Sizes (Partial Eta Squared - η²ₚ)</h3>
+                                <div class="formula-box">η²ₚ = SS_effect / (SS_effect + SS_error)</div>
                                 <ul class="list-disc list-inside mt-2 space-y-1 text-sm">
-                                    <li><strong>✅ Significant</strong>: The confidence interval for the difference <span class="font-semibold">does NOT contain zero</span> → the two treatment means are statistically different.</li>
-                                    <li><strong>○ Not significant</strong>: The confidence interval <span class="font-semibold">contains zero</span> → insufficient evidence to declare a difference.</li>
-                                    <li><strong>p-value (Tukey-adjusted)</strong>: Probability of observing such an extreme difference by chance if means were equal, adjusted for multiple comparisons. Smaller p-value = stronger evidence.</li>
-                                    <li>The <strong>HSD value</strong> is the minimum absolute difference required for significance at the chosen α.</li>
+                                    <li><strong>Small:</strong> η²ₚ ≈ 0.01 (explains ~1% of variance)</li>
+                                    <li><strong>Medium:</strong> η²ₚ ≈ 0.06 (explains ~6% of variance)</li>
+                                    <li><strong>Large:</strong> η²ₚ ≈ 0.14 (explains ≥14% of variance)</li>
                                 </ul>
                             </div>
                             <div>
-                                <h3 class="font-bold text-sky-800">📊 Practical Example</h3>
-                                <p class="text-sm mt-1">If Treatment A mean = 10, Treatment B mean = 15, HSD = 3, difference = 5 → <strong class="text-green-700">significant</strong> (5 > 3).<br>
-                                If 95% CI for (A-B) is (2, 8) → does not contain 0 → significant difference.</p>
+                                <h3 class="font-bold text-sky-800">📏 Cohen's d (Pairwise Comparisons)</h3>
+                                <div class="formula-box">d = (M₁ - M₂) / √(MSE)</div>
+                                <ul class="list-disc list-inside mt-2 space-y-1 text-sm">
+                                    <li><strong>Small:</strong> d ≈ 0.2 (difference of 0.2 standard deviations)</li>
+                                    <li><strong>Medium:</strong> d ≈ 0.5 (moderate, visible effect)</li>
+                                    <li><strong>Large:</strong> d ≈ 0.8 (substantial practical significance)</li>
+                                </ul>
                             </div>
-                            <div class="bg-white/50 rounded-lg p-3 text-xs italic">
-                                💡 <strong>Note</strong>: p-values from ANOVA are unadjusted; pairwise p-values are Tukey-adjusted for multiple comparisons, maintaining family-wise error rate at α.
+                            <div>
+                                <h3 class="font-bold text-sky-800">🔍 Interpreting Confidence Intervals (Tukey HSD)</h3>
+                                <div class="formula-box">CI = (Ȳᵢ − Ȳⱼ) ± HSD, where HSD = q × √(MSE / b)</div>
+                                <ul class="list-disc list-inside mt-2 space-y-1 text-sm">
+                                    <li><strong>If the interval does NOT contain zero</strong> → The difference is <strong class="text-green-700">statistically significant</strong> at the chosen α level. We are (1−α)×100% confident that the true difference between treatment means lies within this range.</li>
+                                    <li><strong>If the interval contains zero</strong> → The difference is <strong class="text-amber-700">not statistically significant</strong>. We cannot rule out that the true difference is zero.</li>
+                                    <li><strong>Example:</strong> If 95% CI for (A − B) is (2.5, 7.3), we are 95% confident that Treatment A is between 2.5 and 7.3 units higher than Treatment B. Since 0 is not in the interval, the difference is significant.</li>
+                                    <li><strong>Family-wise interpretation:</strong> With 95% family-wise confidence, if you repeat the experiment many times, 95% of the time <strong>all</strong> confidence intervals will simultaneously capture their respective true differences.</li>
+                                </ul>
+                                <p class="text-xs mt-2 italic">💡 A statistically significant difference (CI does not contain 0) tells you that an effect exists, but the confidence interval width tells you how precise your estimate is. Narrower intervals indicate more precise estimates.</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Reference q-table (Tukey's Critical Values) -->
+                <!-- Reference q-table -->
                 <div class="bg-white rounded-3xl shadow-xl border overflow-hidden">
                     <div class="bg-slate-100 px-7 py-4 border-b border-slate-200">
                         <h2 class="text-lg font-bold flex items-center gap-2">
                             📚 Tukey's Critical Values (q) Table — α = 0.05
-                            <span class="tooltip-icon" title="Studentized range statistic q(α, k=treatments, ν=error df where ν = (t-1)(b-1)). Use the value that matches your t and error df.">?</span>
+                            <span class="tooltip-icon" title="Studentized range statistic q(α, k=treatments, ν=error df)">?</span>
                         </h2>
                     </div>
                     <div class="overflow-x-auto p-4">
                         <table class="w-full text-sm border-collapse">
-                            <thead>
-                                <tr class="bg-slate-200">
-                                    <th class="p-3 border text-left font-bold">Error df (ν = (t-1)(b-1))</th>
-                                    <th class="p-3 border text-center">t=2</th>
-                                    <th class="p-3 border text-center">t=3</th>
-                                    <th class="p-3 border text-center">t=4</th>
-                                    <th class="p-3 border text-center">t=5</th>
-                                    <th class="p-3 border text-center">t=6</th>
-                                    <th class="p-3 border text-center">t=7</th>
-                                    <th class="p-3 border text-center">t=8</th>
-                                  </tr>
-                            </thead>
+                            <thead><tr class="bg-slate-200"><th class="p-3 border text-left font-bold">Error df (ν)</th><th class="p-3 border text-center">t=2</th><th class="p-3 border text-center">t=3</th><th class="p-3 border text-center">t=4</th><th class="p-3 border text-center">t=5</th><th class="p-3 border text-center">t=6</th><th class="p-3 border text-center">t=7</th><th class="p-3 border text-center">t=8</th></tr></thead>
                             <tbody id="qTableBody" class="text-center font-mono"></tbody>
                         </table>
-                        <p class="text-xs text-slate-500 mt-4">💡 The app automatically suggests the closest q based on your error degrees of freedom (ν). You can adjust manually if needed.</p>
                     </div>
                 </div>
             </div>
@@ -260,13 +260,11 @@
     </div>
 
     <script>
-        // ---------- STATE ----------
         let numTreatments = 3, numBlocks = 6;
         let treatmentNames = ["A", "B", "C"];
         let blockNames = [];
         let dataMatrix = [];
 
-        // q-table (α=0.05) rows: [df, t2, t3, t4, t5, t6, t7, t8]
         const qTable = [
             [5,  3.64, 4.60, 5.22, 5.67, 6.03, 6.33, 6.58],
             [6,  3.46, 4.34, 4.90, 5.30, 5.63, 5.89, 6.12],
@@ -282,13 +280,11 @@
             ["∞", 2.77, 3.31, 3.63, 3.86, 4.03, 4.17, 4.29]
         ];
 
-        // ─── Log-gamma (Lanczos) ──────────────────────────────────────────────
         function lnGamma(z) {
             const p = [0.99999999999980993, 676.5203681218851, -1259.1392167224028,
                        771.32342877765313, -176.61502916214059, 12.507343278686905,
                        -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
-            if (z < 0.5)
-                return Math.log(Math.PI) - Math.log(Math.sin(Math.PI * z)) - lnGamma(1 - z);
+            if (z < 0.5) return Math.log(Math.PI) - Math.log(Math.sin(Math.PI * z)) - lnGamma(1 - z);
             z -= 1;
             let x = p[0];
             for (let i = 1; i < 9; i++) x += p[i] / (z + i);
@@ -296,11 +292,9 @@
             return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
         }
 
-        // ─── Regularised incomplete beta  I_x(a,b)  via continued fraction ───
         function betaInc(x, a, b) {
             if (x <= 0) return 0;
             if (x >= 1) return 1;
-            // Lentz's continued-fraction algorithm (Numerical Recipes §6.4)
             const lbeta = lnGamma(a) + lnGamma(b) - lnGamma(a + b);
             const front = Math.exp(Math.log(x) * a + Math.log(1 - x) * b - lbeta) / a;
             function cf(x, a, b) {
@@ -310,13 +304,11 @@
                 d = 1 / d;
                 let h = d;
                 for (let m = 1; m <= MAXIT; m++) {
-                    // even step
                     let m2 = 2 * m;
                     let num = m * (b - m) * x / ((a + m2 - 1) * (a + m2));
                     d = 1 + num * d; if (Math.abs(d) < FPMIN) d = FPMIN;
                     c = 1 + num / c; if (Math.abs(c) < FPMIN) c = FPMIN;
                     d = 1 / d; h *= d * c;
-                    // odd step
                     num = -(a + m) * (a + b + m) * x / ((a + m2) * (a + m2 + 1));
                     d = 1 + num * d; if (Math.abs(d) < FPMIN) d = FPMIN;
                     c = 1 + num / c; if (Math.abs(c) < FPMIN) c = FPMIN;
@@ -327,21 +319,13 @@
                 }
                 return h;
             }
-            // Use the symmetry relation for numerical stability when x > (a+1)/(a+b+2)
-            if (x < (a + 1) / (a + b + 2)) {
-                return front * cf(x, a, b);
-            } else {
-                // I_x(a,b) = 1 - I_{1-x}(b,a)
+            if (x < (a + 1) / (a + b + 2)) return front * cf(x, a, b);
+            else {
                 const front2 = Math.exp(Math.log(1 - x) * b + Math.log(x) * a - lbeta) / b;
                 return 1 - front2 * cf(1 - x, b, a);
             }
         }
 
-        /**
-         * P(F_{df1,df2} > F_obs)  — upper-tail p-value
-         * Relation: P(F > f) = I_{x}(df1/2, df2/2)
-         * where x = df1*f / (df1*f + df2)
-         */
         function fProb(F, df1, df2) {
             if (!isFinite(F) || F <= 0 || df1 <= 0 || df2 <= 0) return 1;
             const x = (df1 * F) / (df1 * F + df2);
@@ -366,33 +350,25 @@
                 let tr = document.createElement("tr"); 
                 tr.className = "border-b hover:bg-slate-50"; 
                 let dfDisplay = (row[0] === "∞") ? "∞" : row[0];
-                let html = `<td class="p-2 border font-bold bg-slate-50">${dfDisplay}${''}`;
-                for(let i = 1; i <= 7; i++) { 
-                    html += `<td class="p-2 border q-table-cell">${row[i]}${''}`; 
-                }
+                let html = `<td class="p-2 border font-bold bg-slate-50">${dfDisplay}</td>`;
+                for(let i = 1; i <= 7; i++) html += `<td class="p-2 border q-table-cell">${row[i]}</td>`;
                 tr.innerHTML = html; 
                 tbody.appendChild(tr); 
             } 
         }
 
-        // ---------- UI Handlers: Generate table from dimensions ----------
         function generateTableFromDimensions() {
             let newT = parseInt(document.getElementById("numTreatments").value);
             let newB = parseInt(document.getElementById("numBlocks").value);
             if(newT >= 2 && newT <= 10) numTreatments = newT;
-            else numTreatments = 3;
             if(newB >= 2 && newB <= 20) numBlocks = newB;
-            else numBlocks = 6;
             document.getElementById("numTreatments").value = numTreatments;
             document.getElementById("numBlocks").value = numBlocks;
             
-            // adjust names
             if(treatmentNames.length !== numTreatments) {
                 treatmentNames = Array.from({length: numTreatments}, (_, i) => String.fromCharCode(65 + i));
             }
             blockNames = Array.from({length: numBlocks}, (_, i) => `Block ${i+1}`);
-            
-            // resize data matrix with zeros
             dataMatrix = Array(numBlocks).fill().map(() => Array(numTreatments).fill(0));
             
             renderLabelsPanel();
@@ -430,10 +406,10 @@
             treatmentNames.forEach(nm => html += `<th class="p-3 border text-center font-bold">${escapeHtml(nm)}</th>`);
             html += `</thead><tbody>`;
             for(let i = 0; i < numBlocks; i++) {
-                html += `<tr class="border-b"><td class="p-3 border font-medium bg-slate-50">${escapeHtml(blockNames[i] || `Block ${i+1}`)}${''}`;
+                html += `<tr class="border-b"><td class="p-3 border font-medium bg-slate-50">${escapeHtml(blockNames[i] || `Block ${i+1}`)}</td>`;
                 for(let j = 0; j < numTreatments; j++) {
                     let val = (dataMatrix[i] && typeof dataMatrix[i][j] === 'number') ? dataMatrix[i][j] : 0;
-                    html += `<td class="p-2 border"><input type="number" step="any" value="${val}" onchange="updateCell(${i},${j},this.value)" class="w-full text-center px-2 py-2 rounded-lg border">${''}`;
+                    html += `<td class="p-2 border"><input type="number" step="any" value="${val}" onchange="updateCell(${i},${j},this.value)" class="w-full text-center px-2 py-2 rounded-lg border"></td>`;
                 }
                 html += `</tr>`;
             }
@@ -450,18 +426,10 @@
         };
         
         function loadExample() {
-            numTreatments = 3; 
-            numBlocks = 6;
+            numTreatments = 3; numBlocks = 6;
             treatmentNames = ["A", "B", "C"];
             blockNames = ["91–95", "96–100", "101–105", "106–110", "111–115", "116–120"];
-            dataMatrix = [
-                [84, 85, 85],
-                [86, 86, 88],
-                [86, 87, 88],
-                [89, 88, 89],
-                [88, 89, 89],
-                [91, 90, 91]
-            ];
+            dataMatrix = [[84,85,85],[86,86,88],[86,87,88],[89,88,89],[88,89,89],[91,90,91]];
             document.getElementById("numTreatments").value = 3;
             document.getElementById("numBlocks").value = 6;
             renderLabelsPanel();
@@ -471,9 +439,7 @@
         
         function resetApp() { if(confirm("Reset all?")) location.reload(); }
 
-        // ---------- CORE STATISTICS (CF Method) ----------
         function calculateRCBD() {
-            // sync matrix from inputs
             for(let i = 0; i < numBlocks; i++) {
                 for(let j = 0; j < numTreatments; j++) {
                     let inp = document.querySelector(`#dataTableContainer input[onchange*="updateCell(${i},${j},"]`);
@@ -481,9 +447,7 @@
                 }
             }
             
-            // Compute totals
-            let grandTotal = 0;
-            let sumSqY = 0;
+            let grandTotal = 0, sumSqY = 0;
             let treatmentTotals = new Array(numTreatments).fill(0);
             let blockTotals = new Array(numBlocks).fill(0);
             
@@ -500,15 +464,8 @@
             const N = numTreatments * numBlocks;
             const CF = (grandTotal * grandTotal) / N;
             const SSTotal = sumSqY - CF;
-            
-            let sumTreatSq = 0;
-            for(let tot of treatmentTotals) sumTreatSq += tot * tot;
-            const SSTreat = (sumTreatSq / numBlocks) - CF;
-            
-            let sumBlockSq = 0;
-            for(let tot of blockTotals) sumBlockSq += tot * tot;
-            const SSBlock = (sumBlockSq / numTreatments) - CF;
-            
+            const SSTreat = (treatmentTotals.reduce((s, t) => s + t*t, 0) / numBlocks) - CF;
+            const SSBlock = (blockTotals.reduce((s, b) => s + b*b, 0) / numTreatments) - CF;
             const SSError = SSTotal - SSTreat - SSBlock;
             
             const dfTreat = numTreatments - 1;
@@ -522,20 +479,32 @@
             const FTreat = MSTreat / MSE;
             const FBlock = MSBlock / MSE;
             
-            // Correct upper-tail p-values using the fixed fProb
             const pTreat = fProb(FTreat, dfTreat, dfError);
             const pBlock = fProb(FBlock, dfBlock, dfError);
             
+            const etaTreat = SSTreat / (SSTreat + SSError);
+            const etaBlock = SSBlock / (SSBlock + SSError);
+            
+            function getEtaLabel(eta) {
+                if (eta < 0.01) return { label: "very small", class: "effect-small" };
+                if (eta < 0.06) return { label: "small", class: "effect-small" };
+                if (eta < 0.14) return { label: "medium", class: "effect-medium" };
+                return { label: "large", class: "effect-large" };
+            }
+            
+            const etaTreatLabel = getEtaLabel(etaTreat);
+            const etaBlockLabel = getEtaLabel(etaBlock);
+            
             const treatmentMeans = treatmentTotals.map(t => t / numBlocks);
             
-            // Render steps, ANOVA, Tukey
             renderStepsCF(grandTotal, CF, sumSqY, SSTotal, SSTreat, SSBlock, SSError, treatmentTotals, blockTotals);
-            renderAnova(SSTreat, dfTreat, MSTreat, FTreat, pTreat, SSBlock, dfBlock, MSBlock, FBlock, pBlock, SSError, dfError, MSE, SSTotal, dfTotal);
+            renderAnova(SSTreat, dfTreat, MSTreat, FTreat, pTreat, SSBlock, dfBlock, MSBlock, FBlock, pBlock, SSError, dfError, MSE, SSTotal, dfTotal, etaTreat, etaTreatLabel, etaBlock, etaBlockLabel);
             
             window._currentMSE = MSE;
             window._currentMeans = treatmentMeans;
             window._currentErrorDF = dfError;
             window._currentTreatNames = [...treatmentNames];
+            window._currentNumBlocks = numBlocks;
             renderMeans(treatmentMeans);
             
             let suggestedQ = getSuggestedQ(numTreatments, dfError);
@@ -551,38 +520,32 @@
         function renderStepsCF(G, CF, sumY2, SST, SSTr, SSB, SSE, treatTotals, blockTotals) {
             let container = document.getElementById("stepsContent");
             container.innerHTML = `
-                <div class="math-bg p-4 rounded-xl">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div><span class="font-bold">Grand Total G =</span> <span class="text-2xl font-black">${G.toFixed(2)}</span></div>
-                        <div><span class="font-bold">CF = G²/N =</span> ${CF.toFixed(4)}</div>
-                    </div>
-                </div>
+                <div class="math-bg p-4 rounded-xl"><div class="grid grid-cols-2 gap-4"><div><span class="font-bold">Grand Total G =</span> <span class="text-2xl font-black">${G.toFixed(2)}</span></div><div><span class="font-bold">CF = G²/N =</span> ${CF.toFixed(4)}</div></div></div>
                 <div><h4 class="font-bold">📌 SSTotal = ΣY² − CF</h4><div class="bg-slate-100 p-3 rounded-lg font-mono">${sumY2.toFixed(2)} − ${CF.toFixed(4)} = <strong class="text-blue-700">${SST.toFixed(4)}</strong></div></div>
                 <div><h4 class="font-bold">🧪 SSTreat = [Σ(Tᵢ²)/b] − CF</h4><div class="bg-slate-100 p-3 rounded-lg font-mono">[${treatTotals.map(t => `${t}²`).join(' + ')}] / ${numBlocks} − ${CF.toFixed(4)} = <strong class="text-emerald-700">${SSTr.toFixed(4)}</strong></div></div>
                 <div><h4 class="font-bold">📦 SSBlock = [Σ(Bⱼ²)/t] − CF</h4><div class="bg-slate-100 p-3 rounded-lg font-mono">[${blockTotals.map(b => `${b}²`).join(' + ')}] / ${numTreatments} − ${CF.toFixed(4)} = <strong class="text-purple-700">${SSB.toFixed(4)}</strong></div></div>
                 <div><h4 class="font-bold">⚠️ SSError = SSTotal − SSTreat − SSBlock</h4><div class="bg-red-50 p-3 rounded-lg font-mono">${SST.toFixed(4)} − ${SSTr.toFixed(4)} − ${SSB.toFixed(4)} = <strong class="text-red-600">${SSE.toFixed(4)}</strong></div></div>
-                <div class="text-xs text-slate-500 mt-2">✅ Verification: SSTotal = SSTreat + SSBlock + SSError (${(SSTr+SSB+SSE).toFixed(4)})</div>
             `;
         }
         
-        function renderAnova(SSTr, dfTr, MSTr, FTr, pTr, SSB, dfB, MSB, FB, pB, SSE, dfE, MSE, SST, dfTot) {
+        function renderAnova(SSTr, dfTr, MSTr, FTr, pTr, SSB, dfB, MSB, FB, pB, SSE, dfE, MSE, SST, dfTot, etaTreat, etaTreatLabel, etaBlock, etaBlockLabel) {
             let container = document.getElementById("anovaTable");
             let pTreatStars = pTr < 0.001 ? "***" : (pTr < 0.01 ? "**" : (pTr < 0.05 ? "*" : "ns"));
             let pBlockStars = pB < 0.001 ? "***" : (pB < 0.01 ? "**" : (pB < 0.05 ? "*" : "ns"));
             container.innerHTML = `
-                <table class="w-full border-collapse"><thead><tr class="bg-slate-100"><th class="p-3">Source</th><th class="p-3 text-right">SS</th><th class="p-3 text-center">df</th><th class="p-3 text-right">MS</th><th class="p-3 text-right">F</th><th class="p-3 text-right">p-value</th><th class="p-3 text-center">Signif.</th></tr></thead>
+                <table class="w-full border-collapse"><thead><tr class="bg-slate-100"><th class="p-3">Source</th><th class="p-3 text-right">SS</th><th class="p-3 text-center">df</th><th class="p-3 text-right">MS</th><th class="p-3 text-right">F</th><th class="p-3 text-right">p-value</th><th class="p-3 text-center">η²ₚ</th><th class="p-3 text-center">Effect Size</th></tr></thead>
                 <tbody>
-                    <tr class="border-b"><td class="p-3 font-bold">Treatments</td><td class="p-3 text-right">${SSTr.toFixed(3)}</td><td class="p-3 text-center">${dfTr}</td><td class="p-3 text-right">${MSTr.toFixed(3)}</td><td class="p-3 text-right font-bold text-blue-600">${FTr.toFixed(3)}</td><td class="p-3 text-right font-mono">${pTr < 0.0001 ? "<0.0001" : pTr.toFixed(4)}</td><td class="p-3 text-center"><span class="${pTr < 0.05 ? 'sig-star' : 'text-slate-500'}">${pTreatStars}</span></td></tr>
-                    <tr class="border-b"><td class="p-3 font-bold">Blocks</td><td class="p-3 text-right">${SSB.toFixed(3)}</td><td class="p-3 text-center">${dfB}</td><td class="p-3 text-right">${MSB.toFixed(3)}</td><td class="p-3 text-right text-emerald-600">${FB.toFixed(3)}</td><td class="p-3 text-right font-mono">${pB < 0.0001 ? "<0.0001" : pB.toFixed(4)}</td><td class="p-3 text-center"><span class="${pB < 0.05 ? 'sig-star' : 'text-slate-500'}">${pBlockStars}</span></td></tr>
-                    <tr class="border-b"><td class="p-3 font-bold">Error</td><td class="p-3 text-right">${SSE.toFixed(3)}</td><td class="p-3 text-center">${dfE} (ν)</td><td class="p-3 text-right">${MSE.toFixed(4)}</td><td class="p-3 text-right">—</td><td class="p-3 text-right">—</td><td class="p-3 text-center">—</td></tr>
-                    <tr class="bg-slate-50"><td class="p-3 font-bold">Total</td><td class="p-3 text-right">${SST.toFixed(3)}</td><td class="p-3 text-center">${dfTot}</td><td class="p-3 text-right">—</td><td class="p-3 text-right">—</td><td class="p-3 text-right">—</td><td class="p-3 text-center">—</td></tr>
+                    <tr class="border-b"><td class="p-3 font-bold">Treatments</th><td class="p-3 text-right">${SSTr.toFixed(3)}</th><td class="p-3 text-center">${dfTr}</th><td class="p-3 text-right">${MSTr.toFixed(3)}</th><td class="p-3 text-right font-bold text-blue-600">${FTr.toFixed(3)}</th><td class="p-3 text-right font-mono">${pTr < 0.0001 ? "<0.0001" : pTr.toFixed(4)}</th><td class="p-3 text-center font-mono">${etaTreat.toFixed(3)}</th><td class="p-3 text-center"><span class="effect-badge ${etaTreatLabel.class}">${etaTreatLabel.label}</span></th></tr>
+                    <tr class="border-b"><td class="p-3 font-bold">Blocks</th><td class="p-3 text-right">${SSB.toFixed(3)}</th><td class="p-3 text-center">${dfB}</th><td class="p-3 text-right">${MSB.toFixed(3)}</th><td class="p-3 text-right text-emerald-600">${FB.toFixed(3)}</th><td class="p-3 text-right font-mono">${pB < 0.0001 ? "<0.0001" : pB.toFixed(4)}</th><td class="p-3 text-center font-mono">${etaBlock.toFixed(3)}</th><td class="p-3 text-center"><span class="effect-badge ${etaBlockLabel.class}">${etaBlockLabel.label}</span></th></tr>
+                    <tr class="border-b"><td class="p-3 font-bold">Error</th><td class="p-3 text-right">${SSE.toFixed(3)}</th><td class="p-3 text-center">${dfE}</th><td class="p-3 text-right">${MSE.toFixed(4)}</th><td class="p-3 text-right">—</th><td class="p-3 text-right">—</th><td class="p-3 text-center">—</th><td class="p-3 text-center">—</th></tr>
+                    <tr class="bg-slate-50"><td class="p-3 font-bold">Total</th><td class="p-3 text-right">${SST.toFixed(3)}</th><td class="p-3 text-center">${dfTot}</th><td class="p-3 text-right">—</th><td class="p-3 text-right">—</th><td class="p-3 text-right">—</th><td class="p-3 text-center">—</th><td class="p-3 text-center">—</th></tr>
                 </tbody>
-            </table>
-                <div class="mt-4 text-sm bg-slate-50 p-3 rounded-lg">
-                    <div class="font-semibold mb-2">Significance codes: <span class="sig-star">***</span> p < 0.001, <span class="sig-star">**</span> p < 0.01, <span class="sig-star">*</span> p < 0.05, ns = not significant</div>
-                    <div>📌 MSE = ${MSE.toFixed(4)} &nbsp;|&nbsp; SE(mean) = √(MSE/b) = ${Math.sqrt(MSE/numBlocks).toFixed(4)} &nbsp;|&nbsp; ν (error df) = (t-1)(b-1) = ${dfE}</div>
-                </div>
-            `;
+            能有
+            <div class="mt-4 text-sm bg-slate-50 p-3 rounded-lg">
+                <div class="font-semibold mb-2">Significance codes: <span class="sig-star">***</span> p < 0.001, <span class="sig-star">**</span> p < 0.01, <span class="sig-star">*</span> p < 0.05</div>
+                <div class="formula-box mt-2">📐 Partial Eta Squared (η²ₚ) = SS_effect / (SS_effect + SS_error)</div>
+                <div>MSE = ${MSE.toFixed(4)} | SE(mean) = √(MSE/b) = ${Math.sqrt(MSE/numBlocks).toFixed(4)} | ν = ${dfE}</div>
+            </div>`;
         }
         
         function renderMeans(means) {
@@ -597,11 +560,12 @@
         function recalcTukey() {
             if(window._currentMSE === undefined) return;
             let MSE = window._currentMSE, means = window._currentMeans, dfE = window._currentErrorDF;
-            let b = numBlocks, q = parseFloat(document.getElementById("qInput").value) || 3.8;
+            let b = window._currentNumBlocks || numBlocks;
+            let q = parseFloat(document.getElementById("qInput").value) || 3.8;
             let HSD = q * Math.sqrt(MSE / b);
             let alpha = parseFloat(document.getElementById("alphaLevel").value);
             document.getElementById("hsdResult").innerHTML = `HSD = ${q} × √(${MSE.toFixed(4)}/${b}) = <span class="text-5xl font-black">${HSD.toFixed(4)}</span> <span class="text-sm">(α = ${alpha}, ν = ${dfE})</span>`;
-            let ciHtml = `<div class="space-y-3"><h4 class="font-bold">Pairwise differences (μᵢ − μⱼ) with Tukey-adjusted p-values</h4>`;
+            let ciHtml = `<div class="space-y-3"><h4 class="font-bold">Pairwise differences (μᵢ − μⱼ) with Tukey-adjusted p-values & Cohen's d</h4>`;
             
             for(let i = 0; i < means.length; i++) {
                 for(let j = i+1; j < means.length; j++) {
@@ -609,44 +573,43 @@
                     let low = diff - HSD;
                     let up = diff + HSD;
                     let sig = (low > 0 || up < 0);
-                    // Tukey-adjusted p-value: based on studentized range statistic
-                    // q_obs = |diff| / sqrt(MSE/b), then p = P(q_{t,dfE} > q_obs)
-                    // Approximated via the F-distribution: F = q_obs^2 / 2 ~ F(1, dfE) under H0
-                    // for a conservative but reasonable approximation
                     let seDiff = Math.sqrt(MSE / b);
                     let qObs = Math.abs(diff) / seDiff;
-                    // Use 2-sided t approximation scaled to match studentized range
-                    // P_tukey ≈ min(1, k*(k-1)/2 * P(|t_{dfE}| > qObs/sqrt(2)))
-                    // Better: use F approximation P = P(F(1,dfE) > qObs^2/2)
                     let Fobs = (qObs * qObs) / 2;
                     let rawP = fProb(Fobs, 1, dfE);
-                    // Bonferroni-style bound as a simple Tukey approximation
                     let k = means.length;
                     let nPairs = k * (k - 1) / 2;
                     let pValue = Math.min(1, rawP * nPairs);
                     let pStars = pValue < 0.001 ? "***" : (pValue < 0.01 ? "**" : (pValue < 0.05 ? "*" : "ns"));
+                    
+                    let cohenD = Math.abs(diff) / Math.sqrt(MSE);
+                    let dLabel = cohenD < 0.2 ? "negligible" : (cohenD < 0.5 ? "small" : (cohenD < 0.8 ? "medium" : "large"));
+                    let dClass = cohenD < 0.2 ? "effect-small" : (cohenD < 0.5 ? "effect-small" : (cohenD < 0.8 ? "effect-medium" : "effect-large"));
                     
                     ciHtml += `<div class="flex flex-wrap justify-between items-center p-4 bg-white border rounded-xl">
                         <div class="font-mono font-bold">${treatmentNames[i]} − ${treatmentNames[j]}</div>
                         <div class="text-2xl font-black">${diff.toFixed(3)}</div>
                         <div>CI: (${low.toFixed(3)}, ${up.toFixed(3)})</div>
                         <div class="text-sm font-mono">p ≈ ${pValue.toFixed(4)} ${pStars}</div>
+                        <div><span class="effect-badge ${dClass}">d = ${cohenD.toFixed(3)} (${dLabel})</span></div>
                         <div class="px-3 py-1 rounded-full text-xs font-bold ${sig ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}">${sig ? "✅ Significant" : "○ Not significant"}</div>
                     </div>`;
                 }
             }
-            ciHtml += `<div class="text-xs text-slate-500 mt-3">🔍 Tukey-adjusted p-values control family-wise error rate at α = ${alpha}. Values < ${alpha} indicate significant differences.</div></div>`;
+            ciHtml += `<div class="text-xs text-slate-500 mt-3">
+                <div class="formula-box">📐 Cohen's d = (M₁ − M₂) / √(MSE)</div>
+                🔍 Tukey-adjusted p-values control family-wise error rate at α = ${alpha}. Values < ${alpha} indicate significant differences.
+                <div class="formula-box mt-2">📖 CI Interpretation: If the interval (${(HSD>0? "lower, upper" : "")}) does NOT contain zero → significant difference at α = ${alpha}. The interval width indicates precision of the estimate.</div>
+            </div></div>`;
             document.getElementById("ciContainer").innerHTML = ciHtml;
         }
         
-        // Expose globals
         window.recalcTukey = recalcTukey;
         window.generateTableFromDimensions = generateTableFromDimensions;
         window.calculateRCBD = calculateRCBD;
         window.loadExample = loadExample;
         window.resetApp = resetApp;
 
-        // Initialize
         buildQTable();
         generateTableFromDimensions();
     </script>
